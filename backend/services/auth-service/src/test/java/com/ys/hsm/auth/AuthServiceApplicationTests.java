@@ -1,4 +1,4 @@
-package com.ys.auth;
+package com.ys.hsm.auth;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

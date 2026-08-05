@@ -1,4 +1,4 @@
-package com.ys.auth;
+package com.ys.hsm.auth;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

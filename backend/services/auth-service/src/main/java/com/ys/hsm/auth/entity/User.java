@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Document(collation = "users")
+@Document(collection = "users")
 public class User extends BaseDocument{
     @Id
     private String Id;
@@ -21,8 +21,10 @@ public class User extends BaseDocument{
     private String lastName;
     private String email;
     private String mobileNumber;
+    private String password;
     private RoleType role;
     private boolean emailVerified;
+    private boolean mobileVerified;
     private AccountStatus accountStatus;
     private LocalDateTime lastLoginAt;
 }

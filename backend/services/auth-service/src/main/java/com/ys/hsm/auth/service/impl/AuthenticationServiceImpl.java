@@ -4,21 +4,37 @@ import com.ys.hsm.auth.dto.request.*;
 import com.ys.hsm.auth.dto.response.LoginResponse;
 import com.ys.hsm.auth.dto.response.RefreshTokenResponse;
 import com.ys.hsm.auth.dto.response.RegisterResponse;
-import com.ys.hsm.auth.service.AuthenticationService;
+import com.ys.hsm.auth.entity.User;import com.ys.hsm.auth.enums.RoleType;import com.ys.hsm.auth.repository.UserRepository;import com.ys.hsm.auth.service.AuthenticationService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;import org.springframework.stereotype.Service;
 
 
 @Service
 @RequiredArgsConstructor
 public class AuthenticationServiceImpl implements AuthenticationService {
-    /**
-     * @param registerRequest
-     * @return
-     */
-    @Override
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
     public RegisterResponse register(RegisterRequest registerRequest) {
-        return null;
+        if(userRepository.existsByEmail(registerRequest.getEmail())){
+            throw new IllegalArgumentException("Email already registered.");
+        }
+        User user = User.builder()
+                .firstName(registerRequest.getFirstName())
+                .lastName(registerRequest.getLastName())
+                .email(registerRequest.getEmail())
+                .mobileNumber(registerRequest.getMobileNumber())
+                .password(passwordEncoder.encode(registerRequest.getPassword()))
+                .role(RoleType.SOCIETY_ADMIN)
+                .emailVerified(false)
+                .mobileVerified(false)
+                .build();
+        User saveUser = userRepository.save(user);
+        return RegisterResponse.builder()
+                .userId(saveUser.getId())
+                .email(saveUser.getEmail())
+                .message("user registered successfully")
+                .build();
     }
 
     /**

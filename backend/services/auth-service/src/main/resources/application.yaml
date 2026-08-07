@@ -2,14 +2,12 @@ spring:
   application:
     name: auth-service
 
+  data:
+    mongodb:
+      uri: mongodb://hsadmin:Sydney_0509@ac-8p1cykl-shard-00-00.bnmvnin.mongodb.net:27017,ac-8p1cykl-shard-00-01.bnmvnin.mongodb.net:27017,ac-8p1cykl-shard-00-02.bnmvnin.mongodb.net:27017/auth_db?ssl=true&replicaSet=atlas-tzcxgu-shard-0&authSource=admin&appName=housing-society-cluster
+
 server:
   port: 8081
-
-data:
-  mongodb:
-    host: localhost
-    port: 27017
-    database: housing_society_management
 
 application:
   security:
@@ -27,3 +25,8 @@ management:
   endpoint:
     health:
       show-details: always
+
+logging:
+  level:
+    org.springframework.data.mongodb: DEBUG
+    org.mongodb.driver: INFO

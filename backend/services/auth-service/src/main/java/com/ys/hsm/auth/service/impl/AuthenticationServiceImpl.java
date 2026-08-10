@@ -1,12 +1,18 @@
 package com.ys.hsm.auth.service.impl;
 
+import com.ys.hsm.auth.config.JwtProperties;
 import com.ys.hsm.auth.dto.request.*;
 import com.ys.hsm.auth.dto.response.LoginResponse;
 import com.ys.hsm.auth.dto.response.RefreshTokenResponse;
 import com.ys.hsm.auth.dto.response.RegisterResponse;
-import com.ys.hsm.auth.entity.User;import com.ys.hsm.auth.enums.RoleType;import com.ys.hsm.auth.repository.UserRepository;import com.ys.hsm.auth.service.AuthenticationService;
+import com.ys.hsm.auth.entity.User;
+import com.ys.hsm.auth.enums.AccountStatus;
+import com.ys.hsm.auth.enums.RoleType;import com.ys.hsm.auth.repository.UserRepository;import com.ys.hsm.auth.service.AuthenticationService;
+import com.ys.hsm.auth.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 
 
 @Service
@@ -14,6 +20,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;import org.s
 public class AuthenticationServiceImpl implements AuthenticationService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final JwtProperties jwtProperties;
 
     public RegisterResponse register(RegisterRequest registerRequest) {
         if(userRepository.existsByEmail(registerRequest.getEmail())){
@@ -37,13 +45,31 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .build();
     }
 
-    /**
-     * @param loginRequest
-     * @return
-     */
-    @Override
+
     public LoginResponse login(LoginRequest loginRequest) {
-        return null;
+
+       User user = userRepository.findByEmail(loginRequest.getEmail())
+               .orElseThrow(()-> new IllegalArgumentException("Invalid Email or Password"));
+
+       if (user.getAccountStatus()!= AccountStatus.ACTIVE){
+           throw new IllegalStateException("User account is not active");
+       }
+
+       if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())){
+           throw new IllegalArgumentException("Invalid email or password");
+       }
+
+       String accessToken = jwtService.generateAccessToken(user);
+       String refreshToken = jwtService.generateRefreshToken(user);
+
+       user.setLastLoginAt(LocalDateTime.now());
+       userRepository.save(user);
+
+       return LoginResponse.builder().accessToken(accessToken)
+               .refreshToken(refreshToken)
+               .tokenType("Bearer")
+               .expiresIn(jwtProperties.getAccessTokenExpiration())
+               .build();
     }
 
     /**

@@ -56,7 +56,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
        }
 
        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())){
-           throw new IllegalArgumentException("Invalid email or password");
+           throw new IllegalArgumentException("Invalid Email or Password");
        }
 
        String accessToken = jwtService.generateAccessToken(user);

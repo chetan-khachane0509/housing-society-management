@@ -1,7 +1,10 @@
 package com.ys.hsm.auth.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ys.hsm.auth.dto.request.LoginRequest;
 import com.ys.hsm.auth.dto.request.RegisterRequest;
+import com.ys.hsm.auth.dto.response.LoginResponse;
 import com.ys.hsm.auth.dto.response.RegisterResponse;
 import com.ys.hsm.auth.service.AuthenticationService;
 import org.junit.jupiter.api.Test;
@@ -14,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -87,5 +91,55 @@ class AuthenticationControllerTest {
         // Service should not be called
         verify(authenticationService, never())
                 .register(any(RegisterRequest.class));
+    }
+
+    @Test
+    void login_shouldReturn400_whenLoginCredentialsInvalid() throws Exception {
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail("khachane@gmail.com");
+        loginRequest.setPassword("");
+
+        mockMvc.perform(
+                        post("/api/v1/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(loginRequest))
+                )
+                .andExpect(status().isBadRequest());
+        verify(authenticationService, never())
+                .login(any(LoginRequest.class));
+    }
+
+    @Test
+    void login_shouldReturn200_whenCredentialsAreValid() throws Exception {
+
+        LoginRequest request = new LoginRequest();
+        request.setEmail("khachanechetan94@gmail.com");
+        request.setPassword("Chetan@0509");
+
+        LoginResponse loginResponse = LoginResponse.builder()
+                .accessToken("access-token")
+                .refreshToken("refresh-token")
+                .tokenType("Bearer")
+                .expiresIn(900000L)
+                .build();
+
+        when(authenticationService.login(any(LoginRequest.class)))
+                .thenReturn(loginResponse);
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken")
+                        .value("access-token"))
+                .andExpect(jsonPath("$.refreshToken")
+                        .value("refresh-token"))
+                .andExpect(jsonPath("$.tokenType")
+                        .value("Bearer"))
+                .andExpect(jsonPath("$.expiresIn")
+                        .value(900000));
+
+        verify(authenticationService).login(any(LoginRequest.class));
     }
 }

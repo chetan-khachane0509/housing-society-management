@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Document(collation = "refresh_tokens")
+@Document(collection = "refresh_tokens")
 public class RefreshToken {
 
     @Id

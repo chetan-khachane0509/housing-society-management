@@ -3,6 +3,7 @@ package com.ys.hsm.auth.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ys.hsm.auth.dto.request.LoginRequest;
+import com.ys.hsm.auth.dto.request.RefreshTokenRequest;
 import com.ys.hsm.auth.dto.request.RegisterRequest;
 import com.ys.hsm.auth.dto.response.LoginResponse;
 import com.ys.hsm.auth.dto.response.RegisterResponse;
@@ -19,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -141,5 +143,48 @@ class AuthenticationControllerTest {
                         .value(900000));
 
         verify(authenticationService).login(any(LoginRequest.class));
+    }
+
+    @Test
+    void refresh_shouldReturn400_whenRefreshTokenIsInvalid() throws Exception {
+
+        String invalidToken = "invalid-refresh-token";
+
+        when(authenticationService.refreshResponse(any(RefreshTokenRequest.class)))
+                .thenThrow(new IllegalArgumentException("Invalid refresh token"));
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                "refreshToken": "invalid-refresh-token"
+                            }
+                            """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void refresh_shouldReturn400_whenRefreshTokenIsRevoked() throws Exception {
+
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("revoked-refresh-token");
+
+        when(authenticationService.refreshResponse(any(RefreshTokenRequest.class)))
+                .thenThrow(new IllegalStateException(
+                        "Refresh token has been revoked"
+                ));
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                "refreshToken": "revoked-refresh-token"
+                            }
+                            """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("Refresh token has been revoked"));
     }
 }

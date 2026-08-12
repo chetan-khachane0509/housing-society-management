@@ -2,12 +2,15 @@ package com.ys.hsm.auth.service.impl;
 
 import com.ys.hsm.auth.config.JwtProperties;
 import com.ys.hsm.auth.dto.request.LoginRequest;
+import com.ys.hsm.auth.dto.request.RefreshTokenRequest;
 import com.ys.hsm.auth.dto.request.RegisterRequest;
 import com.ys.hsm.auth.dto.response.LoginResponse;
 import com.ys.hsm.auth.dto.response.RegisterResponse;
+import com.ys.hsm.auth.entity.RefreshToken;
 import com.ys.hsm.auth.entity.User;
 import com.ys.hsm.auth.enums.AccountStatus;
 import com.ys.hsm.auth.enums.RoleType;
+import com.ys.hsm.auth.repository.RefreshTokenRepository;
 import com.ys.hsm.auth.repository.UserRepository;
 import com.ys.hsm.auth.service.JwtService;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -43,6 +47,9 @@ public class AuthenticationServiceImplTest {
 
     @Mock
     private JwtProperties jwtProperties;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
 
     @BeforeEach
     void setUp(){}
@@ -156,42 +163,108 @@ public class AuthenticationServiceImplTest {
     }
 
     @Test
-    void login_shouldReturnTokens_whenCredentialsAreValid(){
-        LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setEmail("khachanechetan94@gmail.com");
-        loginRequest.setPassword("Chetan@0509");
+    void login_shouldReturnTokens_whenCredentialsAreValid() {
 
-        User saveUser = User.builder().Id("user-001")
-                .email(loginRequest.getEmail())
-                .password("$2a#1Apasswordhash")
-                .role(RoleType.SOCIETY_ADMIN)
-                .accountStatus(AccountStatus.ACTIVE)
-                .emailVerified(false)
-                .mobileVerified(false)
-                .build();
+            // Arrange
+            LoginRequest request = new LoginRequest();
+            request.setEmail("khachanechetan94@gmail.com");
+            request.setPassword("Chetan@0509");
 
-        when(userRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.ofNullable(saveUser));
-        when(passwordEncoder.matches(loginRequest.getPassword(), saveUser.getPassword())).thenReturn(true);
-        when(jwtService.generateAccessToken(saveUser)).thenReturn("access-token");
-        when(jwtService.generateRefreshToken(saveUser)).thenReturn("refresh-token");
-        when(jwtProperties.getAccessTokenExpiration()).thenReturn(900000L);
-        when(userRepository.save(any(User.class))).thenReturn(saveUser);
+            User user = User.builder()
+                    .id("user-001")
+                    .email("khachanechetan94@gmail.com")
+                    .password("$2a$10$hashedPassword")
+                    .role(RoleType.SOCIETY_ADMIN)
+                    .accountStatus(AccountStatus.ACTIVE)
+                    .emailVerified(false)
+                    .mobileVerified(false)
+                    .build();
 
+            when(userRepository.findByEmail(request.getEmail()))
+                    .thenReturn(Optional.of(user));
 
-        LoginResponse loginResponse = authenticationService.login(loginRequest);
+            when(passwordEncoder.matches(
+                    request.getPassword(),
+                    user.getPassword()))
+                    .thenReturn(true);
 
-        assertNotNull(loginResponse);
-        assertEquals("access-token",loginResponse.getAccessToken());
-        assertEquals("refresh-token", loginResponse.getRefreshToken());
-        assertEquals("Bearer", loginResponse.getTokenType());
-        assertEquals(900000L, loginResponse.getExpiresIn());
-        assertNotNull(saveUser.getLastLoginAt());
+            when(jwtService.generateAccessToken(user))
+                    .thenReturn("access-token");
 
-        verify(userRepository).findByEmail(loginRequest.getEmail());
-        verify(passwordEncoder).matches(loginRequest.getPassword(),saveUser.getPassword());
-        verify(jwtService).generateAccessToken(saveUser);
-        verify(jwtService).generateRefreshToken(saveUser);
-        verify(userRepository).save(any(User.class));
+            when(jwtService.generateRefreshToken(user))
+                    .thenReturn("refresh-token");
+
+            when(jwtProperties.getAccessTokenExpiration())
+                    .thenReturn(900000L);
+
+            when(jwtProperties.getRefreshTokenExpiration())
+                    .thenReturn(604800000L);
+
+            when(refreshTokenRepository.save(any(RefreshToken.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            when(userRepository.save(any(User.class)))
+                    .thenReturn(user);
+
+            // Act
+            LoginResponse response = authenticationService.login(request);
+
+            // Assert
+            assertNotNull(response);
+
+            assertEquals(
+                    "access-token",
+                    response.getAccessToken()
+            );
+
+            assertEquals(
+                    "refresh-token",
+                    response.getRefreshToken()
+            );
+
+            assertEquals(
+                    "Bearer",
+                    response.getTokenType()
+            );
+
+            assertEquals(
+                    900000L,
+                    response.getExpiresIn()
+            );
+
+            // Verify user lookup
+            verify(userRepository)
+                    .findByEmail(request.getEmail());
+
+            // Verify password
+            verify(passwordEncoder)
+                    .matches(
+                            request.getPassword(),
+                            user.getPassword()
+                    );
+
+            // Verify JWT generation
+            verify(jwtService)
+                    .generateAccessToken(user);
+
+            verify(jwtService)
+                    .generateRefreshToken(user);
+
+            // Verify refresh token persistence
+            verify(refreshTokenRepository)
+                    .save(argThat((RefreshToken token) ->
+                            token.getUserId().equals(user.getId())
+                                    && token.getToken().equals("refresh-token")
+                                    && !token.isRevoked()
+                                    && token.getExpiryDate() != null
+                    ));
+
+            // Verify user update
+            verify(userRepository)
+                    .save(user);
+
+            assertNotNull(user.getLastLoginAt());
+
     }
 
     @Test
@@ -200,7 +273,7 @@ public class AuthenticationServiceImplTest {
         loginRequest.setEmail("khachanechetan94@gmail.com");
         loginRequest.setPassword("Chetan0509");
 
-        User user = User.builder().Id("user-001")
+        User user = User.builder().id("user-001")
                 .email(loginRequest.getEmail())
                 .password("$2a#1Apasswordhash")
                 .role(RoleType.SOCIETY_ADMIN)
@@ -232,7 +305,7 @@ public class AuthenticationServiceImplTest {
         request.setPassword("Chetan@0509");
 
         User user = User.builder()
-                .Id("user-001")
+                .id("user-001")
                 .email(request.getEmail())
                 .password("$2a$10$hashedPassword")
                 .role(RoleType.SOCIETY_ADMIN)
@@ -265,5 +338,68 @@ public class AuthenticationServiceImplTest {
 
         verify(userRepository, never())
                 .save(any(User.class));
+    }
+
+    @Test
+    void refreshResponse_shouldThrowException_whenTokenIsInvalid(){
+        RefreshTokenRequest refreshTokenRequest = new RefreshTokenRequest();
+        refreshTokenRequest.setRefreshToken("invalid-refresh-token");
+
+        when(refreshTokenRepository.findByToken(refreshTokenRequest.getRefreshToken()))
+                .thenReturn(Optional.empty());
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class, ()-> authenticationService.refreshResponse(refreshTokenRequest)
+        );
+
+        assertEquals("Invalid refresh token",exception.getMessage());
+        verify(refreshTokenRepository).findByToken(refreshTokenRequest.getRefreshToken());
+
+    }
+    @Test
+    void refreshResponse_shouldThrowException_whenTokenIsRevoked(){
+        RefreshTokenRequest refreshTokenRequest = new RefreshTokenRequest();
+        refreshTokenRequest.setRefreshToken("refresh-token");
+
+        RefreshToken refreshToken = RefreshToken.builder()
+                .id("refresh-001")
+                .userId("user-001")
+                .token(refreshTokenRequest.getRefreshToken())
+                .revoked(true)
+                .expiryDate(LocalDateTime.now().plusDays(7))
+                .build();
+
+        when(refreshTokenRepository.findByToken(refreshTokenRequest.getRefreshToken()))
+                .thenReturn(Optional.of(refreshToken));
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class, ()-> authenticationService.refreshResponse(refreshTokenRequest)
+        );
+
+        assertEquals("refresh token is revoked.",exception.getMessage());
+        verify(refreshTokenRepository).findByToken(refreshTokenRequest.getRefreshToken());
+
+    }
+
+    @Test
+    void refreshResponse_shouldThrowException_whenTokenIsExpired(){
+        RefreshTokenRequest refreshTokenRequest = new RefreshTokenRequest();
+        refreshTokenRequest.setRefreshToken("expired-refresh-token");
+
+        RefreshToken refreshToken = RefreshToken.builder()
+                .id("refresh-001")
+                .userId("user-001")
+                .token(refreshTokenRequest.getRefreshToken())
+                .revoked(false)
+                .expiryDate(LocalDateTime.now().minusDays(1))
+                .build();
+
+        when(refreshTokenRepository.findByToken(refreshTokenRequest.getRefreshToken()))
+                .thenReturn(Optional.of(refreshToken));
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class, ()-> authenticationService.refreshResponse(refreshTokenRequest)
+        );
+
+        assertEquals("refresh token has expired",exception.getMessage());
+        verify(refreshTokenRepository).findByToken(refreshTokenRequest.getRefreshToken());
+
     }
 }

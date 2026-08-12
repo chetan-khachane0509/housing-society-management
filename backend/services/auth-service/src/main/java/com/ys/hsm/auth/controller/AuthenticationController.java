@@ -3,8 +3,10 @@ package com.ys.hsm.auth.controller;
 
 import com.ys.hsm.auth.constants.ApplicationConstants;
 import com.ys.hsm.auth.dto.request.LoginRequest;
+import com.ys.hsm.auth.dto.request.RefreshTokenRequest;
 import com.ys.hsm.auth.dto.request.RegisterRequest;
 import com.ys.hsm.auth.dto.response.LoginResponse;
+import com.ys.hsm.auth.dto.response.RefreshTokenResponse;
 import com.ys.hsm.auth.dto.response.RegisterResponse;
 import com.ys.hsm.auth.service.AuthenticationService;
 import jakarta.validation.Valid;
@@ -34,6 +36,12 @@ public class AuthenticationController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest){
         LoginResponse response = authService.login(loginRequest);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<RefreshTokenResponse> refreshTokens(@Valid @RequestBody RefreshTokenRequest refreshTokenRequest){
+        RefreshTokenResponse response = authService.refreshResponse(refreshTokenRequest);
         return ResponseEntity.ok(response);
     }
 }

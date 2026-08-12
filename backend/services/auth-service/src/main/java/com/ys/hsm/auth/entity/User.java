@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Document(collection = "users")
 public class User extends BaseDocument{
     @Id
-    private String Id;
+    private String id;
     private String firstName;
     private String lastName;
     private String email;

@@ -187,4 +187,24 @@ class AuthenticationControllerTest {
                 .andExpect(jsonPath("$.message")
                         .value("Refresh token has been revoked"));
     }
+
+    @Test
+    void logout_shouldReturn204_whenLogoutIsSuccessful() throws Exception {
+
+        String token = "valid-refresh-token";
+
+        doNothing().when(authenticationService).logout(token);
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                "refreshToken": "valid-refresh-token"
+                            }
+                            """))
+                .andExpect(status().isNoContent());
+
+        verify(authenticationService).logout(token);
+    }
 }

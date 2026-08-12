@@ -128,7 +128,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
      */
     @Override
     public void logout(String token) {
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
 
+        if (refreshToken.isRevoked()) {
+            throw new IllegalStateException("Refresh token has already been revoked");
+        }
+        refreshToken.setRevoked(true);
+        refreshTokenRepository.save(refreshToken);
     }
 
     /**

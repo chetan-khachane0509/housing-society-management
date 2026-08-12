@@ -402,4 +402,39 @@ public class AuthenticationServiceImplTest {
         verify(refreshTokenRepository).findByToken(refreshTokenRequest.getRefreshToken());
 
     }
+
+    @Test
+    void logout_shouldRevokeRefreshToken_whenTokenIsValid() {
+
+        // Arrange
+        String refreshTokenValue = "valid-refresh-token";
+
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken(refreshTokenValue);
+
+        RefreshToken refreshToken = RefreshToken.builder()
+                .id("refresh-001")
+                .userId("user-001")
+                .token(refreshTokenValue)
+                .expiryDate(LocalDateTime.now().plusDays(7))
+                .revoked(false)
+                .build();
+
+        when(refreshTokenRepository.findByToken(refreshTokenValue))
+                .thenReturn(Optional.of(refreshToken));
+
+        // Act
+        authenticationService.logout(request.getRefreshToken());
+
+        // Assert
+        assertTrue(refreshToken.isRevoked());
+
+        // Verify token lookup
+        verify(refreshTokenRepository)
+                .findByToken(refreshTokenValue);
+
+        // Verify the SAME entity was saved
+        verify(refreshTokenRepository)
+                .save(refreshToken);
+    }
 }

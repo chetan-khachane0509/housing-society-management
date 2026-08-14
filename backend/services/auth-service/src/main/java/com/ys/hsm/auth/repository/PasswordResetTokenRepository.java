@@ -1,16 +1,15 @@
 package com.ys.hsm.auth.repository;
 
-import com.ys.hsm.auth.entity.RefreshToken;
+import com.ys.hsm.auth.entity.PasswordResetToken;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-public interface RefreshTokenRepository extends MongoRepository<RefreshToken, String> {
+public interface PasswordResetTokenRepository extends MongoRepository<PasswordResetToken, String> {
 
-
-    Optional<RefreshToken> findByToken(String token);
+    Optional<PasswordResetToken> findByToken(String token);
 
     void deleteByUserId(String userId);
 }

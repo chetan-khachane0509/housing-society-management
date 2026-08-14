@@ -1,18 +1,20 @@
 package com.ys.hsm.auth.service.impl;
 
 import com.ys.hsm.auth.config.JwtProperties;
-import com.ys.hsm.auth.dto.request.LoginRequest;
-import com.ys.hsm.auth.dto.request.RefreshTokenRequest;
-import com.ys.hsm.auth.dto.request.RegisterRequest;
+import com.ys.hsm.auth.dto.request.*;
 import com.ys.hsm.auth.dto.response.LoginResponse;
 import com.ys.hsm.auth.dto.response.RegisterResponse;
+import com.ys.hsm.auth.entity.PasswordResetToken;
 import com.ys.hsm.auth.entity.RefreshToken;
 import com.ys.hsm.auth.entity.User;
 import com.ys.hsm.auth.enums.AccountStatus;
 import com.ys.hsm.auth.enums.RoleType;
+import com.ys.hsm.auth.repository.PasswordResetTokenRepository;
 import com.ys.hsm.auth.repository.RefreshTokenRepository;
 import com.ys.hsm.auth.repository.UserRepository;
+import com.ys.hsm.auth.service.EmailService;
 import com.ys.hsm.auth.service.JwtService;
+import com.ys.hsm.auth.service.PasswordResetTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +22,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
@@ -42,6 +47,9 @@ public class AuthenticationServiceImplTest {
     @InjectMocks
     private AuthenticationServiceImpl authenticationService;
 
+    @InjectMocks
+    private PasswordResetTokenServiceImpl passwordResetTokenServiceImpl;
+
     @Mock
     private JwtService jwtService;
 
@@ -50,6 +58,18 @@ public class AuthenticationServiceImplTest {
 
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock
+    private PasswordResetTokenService passwordResetTokenService;
+
+    @Mock
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    Authentication authentication;
 
     @BeforeEach
     void setUp(){}
@@ -436,5 +456,218 @@ public class AuthenticationServiceImplTest {
         // Verify the SAME entity was saved
         verify(refreshTokenRepository)
                 .save(refreshToken);
+    }
+
+    @Test
+    void forgotPassword_shouldSendResetEmail(){
+        ForgotPasswordRequest forgotPasswordRequest = new ForgotPasswordRequest();
+        forgotPasswordRequest.setEmail("khachanechetan94@gmail.com");
+
+        User user = User.builder()
+                .id("user-001")
+                .email(forgotPasswordRequest.getEmail())
+                .firstName("Chetan")
+                .build();
+
+        when(userRepository.findByEmail(forgotPasswordRequest.getEmail()))
+                .thenReturn(Optional.of(user));
+
+        when(passwordResetTokenService.createToken(user.getId()))
+                .thenReturn("password-reset-token");
+
+        authenticationService.forgotPassword(forgotPasswordRequest);
+        verify(passwordResetTokenService).createToken(user.getId());
+        verify(emailService).sendPasswordResetEmail(user, "password-reset-token");
+    }
+
+    @Test
+    void forgotPassword_shouldNotThrowException_whenUserNotFound() {
+
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("unknown@gmail.com");
+
+        when(userRepository.findByEmail(request.getEmail()))
+                .thenReturn(Optional.empty());
+
+        assertDoesNotThrow(() ->
+                authenticationService.forgotPassword(request)
+        );
+
+        verify(userRepository)
+                .findByEmail("unknown@gmail.com");
+
+        verify(passwordResetTokenService, never())
+                .createToken(anyString());
+
+        verify(emailService, never())
+                .sendPasswordResetEmail(
+                        any(User.class),
+                        anyString()
+                );
+    }
+
+    @Test
+    void resetPassword_shouldResetPasswordSuccessfully(){
+        ResetPasswordRequest resetPasswordRequest = new ResetPasswordRequest();
+        resetPasswordRequest.setResetToken("new-reset-token");
+        resetPasswordRequest.setNewPassword("new-password");
+
+        User user = User.builder()
+                .id("user-001")
+                .email("khachanechetan94@gmail.com")
+                .password("old-encoded-password")
+                .build();
+
+        PasswordResetToken passwordResetToken = PasswordResetToken.builder()
+                .token(resetPasswordRequest.getResetToken())
+                .userId("user-001")
+                .used(false)
+                .expiryDate(LocalDateTime.now().plusMinutes(15))
+                .build();
+
+        when(passwordResetTokenRepository.findByToken(resetPasswordRequest.getResetToken()))
+                .thenReturn(Optional.of(passwordResetToken));
+
+        when(userRepository.findById("user-001")).thenReturn(Optional.of(user));
+
+        when(passwordEncoder.encode(resetPasswordRequest.getNewPassword()))
+                .thenReturn("new-encoded-password");
+
+        authenticationService.resetPassword(resetPasswordRequest);
+        verify(passwordResetTokenService).validateToken(resetPasswordRequest.getResetToken());
+        verify(passwordEncoder).encode(resetPasswordRequest.getNewPassword());
+        verify(userRepository).save(user);
+        verify(passwordResetTokenService).consumeToken(resetPasswordRequest.getResetToken());
+
+        assertEquals("new-encoded-password", user.getPassword());
+
+    }
+
+    @Test
+    void validateToken_shouldThrowException_whenTokenIsExpired() {
+
+        PasswordResetToken token = PasswordResetToken.builder()
+                .token("expired-token")
+                .userId("user-001")
+                .used(false)
+                .expiryDate(LocalDateTime.now().minusMinutes(1))
+                .build();
+
+        when(passwordResetTokenRepository.findByToken("expired-token"))
+                .thenReturn(Optional.of(token));
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> passwordResetTokenServiceImpl.validateToken("expired-token")
+        );
+
+        assertEquals("Reset token is expired", exception.getMessage());
+    }
+
+    @Test
+    void changePassword_shouldChangePasswordSuccessfully(){
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword("old-password");
+        request.setNewPassword("new-password");
+
+        User user = User.builder()
+                .id("user-001")
+                .email("khachanechetan94@gmail.com")
+                .password("old-encoded-password")
+                .build();
+
+        when(authentication.getName()).thenReturn("khachanechetan94@gmail.com");
+        when(userRepository.findByEmail("khachanechetan94@gmail.com")   ).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(
+                "old-password", "old-encoded-password"
+        )).thenReturn(true);
+
+
+        when(passwordEncoder.encode("new-password")).thenReturn("new-encoded-password");
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        authenticationService.changePassword(request);
+
+        assertEquals("new-encoded-password", user.getPassword());
+
+        verify(userRepository).findByEmail("khachanechetan94@gmail.com");
+        verify(passwordEncoder).matches(
+                "old-password", "old-encoded-password"
+        );
+        verify(passwordEncoder).encode("new-password");
+        verify(userRepository).save(user);
+
+    }
+
+    @Test
+    void changePassword_shouldThrowException_whenCurrentPasswordIsIncorrect() {
+
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword("WrongPassword");
+        request.setNewPassword("NewPassword@456");
+
+        User user = User.builder()
+                .id("user-001")
+                .email("user@gmail.com")
+                .password("old-encoded-password")
+                .build();
+
+        when(authentication.getName())
+                .thenReturn("user@gmail.com");
+
+        when(userRepository.findByEmail("user@gmail.com"))
+                .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.matches(
+                "WrongPassword",
+                "old-encoded-password"))
+                .thenReturn(false);
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+
+        when(securityContext.getAuthentication())
+                .thenReturn(authentication);
+
+        SecurityContextHolder.setContext(securityContext);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> authenticationService.changePassword(request)
+        );
+
+        assertEquals(
+                "Current password is incorrect",
+                exception.getMessage()
+        );
+
+        verify(userRepository).findByEmail("user@gmail.com");
+
+        verify(passwordEncoder)
+                .matches("WrongPassword", "old-encoded-password");
+
+        verify(userRepository, never()).save(any(User.class));
+
+        verify(passwordEncoder, never())
+                .encode(anyString());
+    }
+
+    @Test
+    void validateToken_shouldThrowException_whenTokenDoesNotExist() {
+
+        when(passwordResetTokenRepository.findByToken("invalid-token"))
+                .thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> passwordResetTokenServiceImpl.validateToken("invalid-token")
+        );
+
+        assertEquals(
+                "Invalid reset token",
+                exception.getMessage()
+        );
     }
 }

@@ -1,13 +1,11 @@
 package com.ys.hsm.auth.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ys.hsm.auth.dto.request.LoginRequest;
-import com.ys.hsm.auth.dto.request.RefreshTokenRequest;
-import com.ys.hsm.auth.dto.request.RegisterRequest;
+import com.ys.hsm.auth.dto.request.*;
 import com.ys.hsm.auth.dto.response.LoginResponse;
 import com.ys.hsm.auth.dto.response.RegisterResponse;
 import com.ys.hsm.auth.service.AuthenticationService;
+import com.ys.hsm.auth.service.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -20,7 +18,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -36,6 +33,9 @@ class AuthenticationControllerTest {
 
     @MockitoBean
     private AuthenticationService authenticationService;
+
+    @MockitoBean
+    private JwtService jwtService;
 
     @Test
     void register_shouldReturn201_whenRequestIsValid() throws Exception {
@@ -206,5 +206,70 @@ class AuthenticationControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(authenticationService).logout(token);
+    }
+
+    @Test
+    void forgotPassword_shouldReturn204() throws Exception {
+
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("user@gmail.com");
+
+        doNothing()
+                .when(authenticationService)
+                .forgotPassword(any(ForgotPasswordRequest.class));
+
+        mockMvc.perform(
+                        post("/api/v1//auth/forgot-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isNoContent());
+
+        verify(authenticationService)
+                .forgotPassword(any(ForgotPasswordRequest.class));
+    }
+
+    @Test
+    void resetPassword_shouldReturn204() throws Exception {
+
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setResetToken("reset-token-123");
+        request.setNewPassword("NewPassword@123");
+
+        doNothing()
+                .when(authenticationService)
+                .resetPassword(any(ResetPasswordRequest.class));
+
+        mockMvc.perform(
+                        post("/api/v1/auth/reset-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isNoContent());
+
+        verify(authenticationService)
+                .resetPassword(any(ResetPasswordRequest.class));
+    }
+
+    @Test
+    void changePassword_shouldReturn204() throws Exception {
+
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword("OldPassword@123");
+        request.setNewPassword("NewPassword@456");
+
+        doNothing()
+                .when(authenticationService)
+                .changePassword(any(ChangePasswordRequest.class));
+
+        mockMvc.perform(
+                        post("/api/v1/auth/change-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isNoContent());
+
+        verify(authenticationService)
+                .changePassword(any(ChangePasswordRequest.class));
     }
 }

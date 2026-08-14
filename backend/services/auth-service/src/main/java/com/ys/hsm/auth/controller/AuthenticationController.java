@@ -2,9 +2,7 @@ package com.ys.hsm.auth.controller;
 
 
 import com.ys.hsm.auth.constants.ApplicationConstants;
-import com.ys.hsm.auth.dto.request.LoginRequest;
-import com.ys.hsm.auth.dto.request.RefreshTokenRequest;
-import com.ys.hsm.auth.dto.request.RegisterRequest;
+import com.ys.hsm.auth.dto.request.*;
 import com.ys.hsm.auth.dto.response.LoginResponse;
 import com.ys.hsm.auth.dto.response.RefreshTokenResponse;
 import com.ys.hsm.auth.dto.response.RegisterResponse;
@@ -48,6 +46,27 @@ public class AuthenticationController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest refreshTokenRequest){
         authService.logout(refreshTokenRequest.getRefreshToken());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest forgotPasswordRequest){
+        authService.forgotPassword(forgotPasswordRequest);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest resetPasswordRequest){
+        authService.resetPassword(resetPasswordRequest);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(
+            @Valid @RequestBody ChangePasswordRequest changePasswordRequest) {
+
+        authService.changePassword(changePasswordRequest);
+
         return ResponseEntity.noContent().build();
     }
 }

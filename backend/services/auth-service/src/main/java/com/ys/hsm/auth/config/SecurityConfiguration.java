@@ -1,5 +1,6 @@
 package com.ys.hsm.auth.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -7,25 +8,35 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfiguration {
+
+   private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception{
-        httpSecurity.csrf(csrf-> csrf.disable())
+        httpSecurity
+                .sessionManagement(session -> session
+                        .maximumSessions(1))
+                .csrf(csrf-> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.
                         requestMatchers("/api/v1/auth/health",
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/refresh",
-                                "/api/v1/auth/logout"
+                                "/api/v1/auth/logout",
+                                "/api/v1/auth/forgot-password",
+                                "/api/v1/auth/reset-password"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(http -> http.disable())
-                .formLogin(form -> form.disable());
+                .formLogin(form -> form.disable())
+                        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return httpSecurity.build();
     }
 

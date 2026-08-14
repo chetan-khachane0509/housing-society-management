@@ -5,14 +5,20 @@ import com.ys.hsm.auth.dto.request.*;
 import com.ys.hsm.auth.dto.response.LoginResponse;
 import com.ys.hsm.auth.dto.response.RefreshTokenResponse;
 import com.ys.hsm.auth.dto.response.RegisterResponse;
+import com.ys.hsm.auth.entity.PasswordResetToken;
 import com.ys.hsm.auth.entity.RefreshToken;
 import com.ys.hsm.auth.entity.User;
 import com.ys.hsm.auth.enums.AccountStatus;
 import com.ys.hsm.auth.enums.RoleType;
+import com.ys.hsm.auth.repository.PasswordResetTokenRepository;
 import com.ys.hsm.auth.repository.RefreshTokenRepository;
 import com.ys.hsm.auth.repository.UserRepository;import com.ys.hsm.auth.service.AuthenticationService;
+import com.ys.hsm.auth.service.EmailService;
 import com.ys.hsm.auth.service.JwtService;
+import com.ys.hsm.auth.service.PasswordResetTokenService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -26,6 +32,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final JwtService jwtService;
     private final JwtProperties jwtProperties;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final PasswordResetTokenService passwordResetTokenService;
+    private final EmailService emailService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     public RegisterResponse register(RegisterRequest registerRequest) {
         if(userRepository.existsByEmail(registerRequest.getEmail())){
@@ -144,14 +153,30 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public void forgotPassword(ForgotPasswordRequest forgotPasswordRequest) {
 
+        userRepository.findByEmail(forgotPasswordRequest.getEmail())
+                .ifPresent(user -> {
+                    String resetToken =
+                            passwordResetTokenService.createToken(user.getId());
+
+                    emailService.sendPasswordResetEmail(user, resetToken);
+                });
     }
 
-    /**
-     * @param resetPasswordRequest
-     */
-    @Override
-    public void resetPassword(ResetPasswordRequest resetPasswordRequest) {
 
+    public void resetPassword(ResetPasswordRequest resetPasswordRequest) {
+        passwordResetTokenService.validateToken(resetPasswordRequest.getResetToken());
+
+        PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(
+                resetPasswordRequest.getResetToken())
+                .orElseThrow(()-> new IllegalArgumentException("Invalid reset token"));
+
+        User user = userRepository.findById(passwordResetToken.getUserId())
+                .orElseThrow(()-> new IllegalArgumentException("User not found"));
+
+        user.setPassword(passwordEncoder.encode(resetPasswordRequest.getNewPassword()));
+
+        userRepository.save(user);
+        passwordResetTokenService.consumeToken(resetPasswordRequest.getResetToken());
     }
 
     /**
@@ -159,6 +184,36 @@ public class AuthenticationServiceImpl implements AuthenticationService {
      */
     @Override
     public void changePassword(ChangePasswordRequest changePasswordRequest) {
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
 
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("User not found"));
+
+        if (!passwordEncoder.matches(
+                changePasswordRequest.getCurrentPassword(),
+                user.getPassword())) {
+
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+
+        if (passwordEncoder.matches(
+                changePasswordRequest.getNewPassword(),
+                user.getPassword())) {
+
+            throw new IllegalArgumentException(
+                    "New password must be different from current password");
+        }
+
+        user.setPassword(
+                passwordEncoder.encode(
+                        changePasswordRequest.getNewPassword()
+                )
+        );
+
+        userRepository.save(user);
     }
 }

@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+.github
+
+# IntelliJ IDEA
+.idea
+*.iml
+
+# Maven build output
+**/target/
+**/build/
+
+# Maven wrapper/cache
+.mvn/
+**/.mvn/
+**/mvnw
+**/mvnw.cmd
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local environment/configuration files
+.env
+.env.*
+*.env
+
+# Documentation that isn't required for the Docker build
+docs/
+
+# Node/frontend dependencies if present
+node_modules/
+
+# Temporary files
+tmp/
+temp/

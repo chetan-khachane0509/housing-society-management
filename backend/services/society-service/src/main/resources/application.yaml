@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: society-service
+
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+
+server:
+  port: 8082
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.springframework.data.mongodb: DEBUG
+    org.mongodb.driver: INFO

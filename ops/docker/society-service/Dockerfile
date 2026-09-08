@@ -1,0 +1,23 @@
+# ---------- Build stage ----------
+FROM maven:3.9.16-eclipse-temurin-21 AS build
+
+WORKDIR /app
+
+# Copy backend project into the build container
+COPY backend ./backend
+
+# Build Society Service and its dependencies
+RUN mvn -f backend/pom.xml clean package -DskipTests
+
+
+# ---------- Runtime stage ----------
+FROM eclipse-temurin:21-jre
+
+WORKDIR /app
+
+# Copy the Society Service JAR from the build stage
+COPY --from=build /app/backend/services/society-service/target/society-service-1.0.1.jar app.jar
+
+EXPOSE 8082
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,0 +1,17 @@
+services:
+
+  society-service:
+    image: chery05/hsms-society-service:1.0.1
+    container_name: hsms-society-service
+    ports:
+      - "8082:8082"
+    environment:
+      MONGODB_URI: "${SOCIETY_MONGODB_URI}"
+
+  auth-service:
+    image: chery05/hsm-auth-service:1.0.0
+    container_name: hsms-auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      MONGODB_URI: "${AUTH_MONGODB_URI}"

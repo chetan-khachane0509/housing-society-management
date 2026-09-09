@@ -6,8 +6,19 @@ spring:
     mongodb:
       uri: ${SOCIETY_MONGODB_URI}
 
+  cloud:
+    discovery:
+      enabled: true
+
 server:
   port: 8082
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
 
 jwt:
   secret-key: ${JWT_SECRET}

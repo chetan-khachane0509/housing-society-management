@@ -6,7 +6,7 @@ WORKDIR /app
 # Copy backend project into the build container
 COPY backend ./backend
 
-# Build Auth Service and its dependencies
+# Build API Gateway and its dependencies
 RUN mvn -f backend/pom.xml clean package -DskipTests
 
 
@@ -15,9 +15,9 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-# Copy the Auth Service JAR from the build stage
-COPY --from=build /app/backend/services/auth-service/target/auth-service-*.jar app.jar
+# Copy the API Gateway JAR from the build stage
+COPY --from=build /app/backend/services/api-gateway/target/api-gateway-*.jar app.jar
 
-EXPOSE 8081
+EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

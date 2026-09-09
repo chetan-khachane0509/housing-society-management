@@ -16,7 +16,7 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 # Copy the Society Service JAR from the build stage
-COPY --from=build /app/backend/services/society-service/target/society-service-1.0.1.jar app.jar
+COPY --from=build /app/backend/services/society-service/target/society-service-*.jar app.jar
 
 EXPOSE 8082
 

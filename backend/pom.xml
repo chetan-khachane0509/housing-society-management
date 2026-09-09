@@ -96,12 +96,10 @@
     <modules>
 
         <module>libraries/common-library</module>
-
         <module>services/auth-service</module>
-
         <module>services/society-service</module>
-
         <module>services/api-gateway</module>
+        <module>services/discovery-server</module>
 
     </modules>
 

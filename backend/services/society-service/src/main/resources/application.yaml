@@ -1,27 +1,13 @@
 spring:
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
   application:
     name: society-service
 
   data:
     mongodb:
       uri: ${SOCIETY_MONGODB_URI}
-
-  cloud:
-    discovery:
-      enabled: true
-
-server:
-  port: 8082
-
-eureka:
-  instance:
-    prefer-ip-address: true
-
-  client:
-    service-url:
-      defaultZone: ${EUREKA_SERVER_URL}
-    register-with-eureka: true
-    fetch-registry: true
 
 jwt:
   secret-key: ${JWT_SECRET}
@@ -36,7 +22,3 @@ management:
     health:
       show-details: always
 
-logging:
-  level:
-    org.springframework.data.mongodb: DEBUG
-    org.mongodb.driver: INFO

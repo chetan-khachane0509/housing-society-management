@@ -1,4 +1,8 @@
 spring:
+  cloud:
+    config:
+      enabled: false
+
   application:
     name: discovery-server
 

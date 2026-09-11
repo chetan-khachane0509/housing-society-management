@@ -1,36 +1,9 @@
-server:
-  port: 8080
-
 spring:
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
   application:
     name: api-gateway
 
-  cloud:
-    discovery:
-      enabled: true
-
-    gateway:
-      routes:
-
-        # Auth Service
-        # lb - load balencer
-        - id: auth-service
-          uri: lb://AUTH-SERVICE
-          predicates:
-            - Path=/api/v1/auth/**
-
-        # Society Service
-        - id: society-service
-          uri: lb://SOCIETY-SERVICE
-          predicates:
-            - Path=/api/v1/society/**
-
 jwt:
   secret-key: ${JWT_SECRET}
-
-eureka:
-  client:
-    service-url:
-      defaultZone: ${EUREKA_SERVER_URL}
-    register-with-eureka: true
-    fetch-registry: true

@@ -49,4 +49,19 @@ public class SocietyController {
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/{societyId}/wings/{wingId}/flats/{flatId}/validate")
+    public ResponseEntity<Void> validateResidence(
+            @PathVariable String societyId,
+            @PathVariable String wingId,
+            @PathVariable String flatId) {
+
+        societyService.validateResidence(
+                societyId,
+                wingId,
+                flatId
+        );
+
+        return ResponseEntity.ok().build();
+    }
 }

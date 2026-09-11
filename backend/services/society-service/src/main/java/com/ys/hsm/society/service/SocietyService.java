@@ -8,4 +8,5 @@ public interface SocietyService {
      SocietyResponse createSociety(SocietyRequest societyRequest);
      SocietyResponse approveSociety(String societyId);
      SocietyResponse rejectSociety(String societyId);
+     void validateResidence(String societyId, String wingId, String flatId);
 }

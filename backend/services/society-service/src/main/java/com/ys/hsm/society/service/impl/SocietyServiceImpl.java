@@ -145,6 +145,39 @@ public class SocietyServiceImpl implements SocietyService {
         return mapToResponse(savedSociety);
     }
 
+    @Override
+    public void validateResidence(String societyId, String wingId, String flatId) {
+        Society society = societyRepository.findById(societyId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Society not found: " + societyId));
+
+        Wing wing = wingRepository.findById(wingId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Wing not found: " + wingId));
+
+        if (!society.getId().equals(wing.getSocietyId())) {
+            throw new IllegalArgumentException(
+                    "Wing does not belong to the specified society");
+        }
+
+        Flat flat = flatRepository.findById(flatId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Flat not found: " + flatId));
+
+        if (!flat.getSocietyId().equals(societyId)) {
+            throw new IllegalArgumentException(
+                    "Flat does not belong to the specified society");
+        }
+
+        if (!flat.getWingId().equals(wingId)) {
+            throw new IllegalArgumentException(
+                    "Flat does not belong to the specified wing");
+        }
+    }
+
     private SocietyResponse mapToResponse(Society savedSociety) {
         return SocietyResponse.builder()
                 .societyId(savedSociety.getId())

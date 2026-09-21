@@ -1,0 +1,24 @@
+spring:
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+  application:
+    name: resident-service
+
+  data:
+    mongodb:
+      uri: ${RESIDENT_MONGODB_URI}
+
+#jwt:
+#  secret-key: ${JWT_SECRET}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+  endpoint:
+    health:
+      show-details: always
+

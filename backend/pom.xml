@@ -111,6 +111,7 @@
         <module>services/discovery-server</module>
         <module>services/config-server</module>
         <module>services/resident-service</module>
+        <module>services/complaint-service</module>
 
     </modules>
 

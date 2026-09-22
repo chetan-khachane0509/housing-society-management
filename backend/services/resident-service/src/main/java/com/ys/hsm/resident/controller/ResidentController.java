@@ -26,4 +26,13 @@ public class ResidentController {
                 .status(HttpStatus.CREATED)
                 .body(resident);
     }
+
+    @GetMapping("/{residentId}")
+    public ResponseEntity<Resident> getResidentById(
+            @PathVariable String residentId) {
+
+        return ResponseEntity.ok(
+                residentService.getResidentById(residentId)
+        );
+    }
 }

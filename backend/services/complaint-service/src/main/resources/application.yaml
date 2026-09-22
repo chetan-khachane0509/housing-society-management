@@ -1,0 +1,21 @@
+spring:
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+  application:
+    name: complaint-service
+
+  data:
+    mongodb:
+      uri: ${COMPLAINT_MONGODB_URI}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+  endpoint:
+    health:
+      show-details: always
+

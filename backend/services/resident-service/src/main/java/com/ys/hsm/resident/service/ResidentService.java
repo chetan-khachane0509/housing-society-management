@@ -5,4 +5,5 @@ import com.ys.hsm.resident.entity.Resident;
 
 public interface ResidentService {
     Resident registerResident(ResidentRequest request, String authorizationHeader);
+    Resident getResidentById(String residentId);
 }

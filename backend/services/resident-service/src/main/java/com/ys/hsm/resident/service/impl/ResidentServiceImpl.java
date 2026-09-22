@@ -49,4 +49,15 @@ public class ResidentServiceImpl implements ResidentService {
         return residentRepository.save(resident);
 
     }
+
+    @Override
+    public Resident getResidentById(String residentId) {
+
+        return residentRepository.findById(residentId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Resident not found with id: " + residentId
+                        )
+                );
+    }
 }

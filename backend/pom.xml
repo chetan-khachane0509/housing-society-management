@@ -112,6 +112,7 @@
         <module>services/config-server</module>
         <module>services/resident-service</module>
         <module>services/complaint-service</module>
+        <module>services/notification-service</module>
 
     </modules>
 

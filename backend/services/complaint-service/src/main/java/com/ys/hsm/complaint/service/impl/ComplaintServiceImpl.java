@@ -1,6 +1,7 @@
 package com.ys.hsm.complaint.service.impl;
 
 import com.ys.hsm.complaint.client.ResidentClient;
+import com.ys.hsm.complaint.dto.event.ComplaintEvent;
 import com.ys.hsm.complaint.dto.request.ComplaintRequest;
 import com.ys.hsm.complaint.dto.resident.ResidentDetailsResponse;
 import com.ys.hsm.complaint.dto.response.ComplaintResponse;
@@ -8,6 +9,7 @@ import com.ys.hsm.complaint.entity.Complaint;
 import com.ys.hsm.complaint.entity.ComplaintHistory;
 import com.ys.hsm.complaint.enums.ComplaintCategory;
 import com.ys.hsm.complaint.enums.ComplaintStatus;
+import com.ys.hsm.complaint.producer.ComplaintEventProducer;
 import com.ys.hsm.complaint.repository.ComplaintHistoryRepository;
 import com.ys.hsm.complaint.repository.ComplaintRepository;
 import com.ys.hsm.complaint.service.ComplaintNumberGenerator;
@@ -29,6 +31,7 @@ public class ComplaintServiceImpl implements ComplaintService {
     private final ComplaintNumberGenerator complaintNumberGenerator;
     private final ResidentClient residentClient;
     private final ComplaintHistoryRepository complaintHistoryRepository;
+    private final ComplaintEventProducer complaintEventProducer;
 
     @Override
     public ComplaintResponse createComplaint(
@@ -74,6 +77,17 @@ public class ComplaintServiceImpl implements ComplaintService {
 
         Complaint savedComplaint =
                 complaintRepository.save(complaint);
+
+        ComplaintEvent event = new ComplaintEvent(
+                savedComplaint.getComplaintNumber(),
+                savedComplaint.getResidentName(),
+                savedComplaint.getResidentEmail(),
+                savedComplaint.getResidentMobile(),
+                savedComplaint.getStatus().name(),
+                "Your complaint has been registered successfully."
+        );
+
+        complaintEventProducer.publishComplaintEvent(event);
 
         return ComplaintResponse.builder()
                 .complaintNumber(savedComplaint.getComplaintNumber())
@@ -184,6 +198,19 @@ public class ComplaintServiceImpl implements ComplaintService {
         Complaint updatedComplaint =
                 complaintRepository.save(complaint);
 
+        ComplaintEvent event = new ComplaintEvent(
+                updatedComplaint.getComplaintNumber(),
+                updatedComplaint.getResidentName(),
+                updatedComplaint.getResidentEmail(),
+                updatedComplaint.getResidentMobile(),
+                updatedComplaint.getStatus().name(),
+                "Your complaint has been assigned to "
+                        + updatedComplaint.getAssignedTo()
+                        + "."
+        );
+
+        complaintEventProducer.publishComplaintEvent(event);
+
         return ComplaintResponse.builder()
                 .complaintNumber(updatedComplaint.getComplaintNumber())
                 .residentName(updatedComplaint.getResidentName())
@@ -231,6 +258,17 @@ public class ComplaintServiceImpl implements ComplaintService {
 
         Complaint updatedComplaint =
                 complaintRepository.save(complaint);
+
+        ComplaintEvent event = new ComplaintEvent(
+                updatedComplaint.getComplaintNumber(),
+                updatedComplaint.getResidentName(),
+                updatedComplaint.getResidentEmail(),
+                updatedComplaint.getResidentMobile(),
+                updatedComplaint.getStatus().name(),
+                "Your complaint is now being worked on."
+        );
+
+        complaintEventProducer.publishComplaintEvent(event);
 
         return ComplaintResponse.builder()
                 .complaintNumber(updatedComplaint.getComplaintNumber())
@@ -282,6 +320,17 @@ public class ComplaintServiceImpl implements ComplaintService {
         Complaint updatedComplaint =
                 complaintRepository.save(complaint);
 
+        ComplaintEvent event = new ComplaintEvent(
+                updatedComplaint.getComplaintNumber(),
+                updatedComplaint.getResidentName(),
+                updatedComplaint.getResidentEmail(),
+                updatedComplaint.getResidentMobile(),
+                updatedComplaint.getStatus().name(),
+                "Your complaint is resolved successfully."
+        );
+
+        complaintEventProducer.publishComplaintEvent(event);
+
         return ComplaintResponse.builder()
                 .complaintNumber(updatedComplaint.getComplaintNumber())
                 .residentName(updatedComplaint.getResidentName())
@@ -329,6 +378,17 @@ public class ComplaintServiceImpl implements ComplaintService {
 
         Complaint updatedComplaint =
                 complaintRepository.save(complaint);
+
+        ComplaintEvent event = new ComplaintEvent(
+                updatedComplaint.getComplaintNumber(),
+                updatedComplaint.getResidentName(),
+                updatedComplaint.getResidentEmail(),
+                updatedComplaint.getResidentMobile(),
+                updatedComplaint.getStatus().name(),
+                "Your complaint has been closed."
+        );
+
+        complaintEventProducer.publishComplaintEvent(event);
 
         return ComplaintResponse.builder()
                 .complaintNumber(updatedComplaint.getComplaintNumber())
@@ -380,6 +440,18 @@ public class ComplaintServiceImpl implements ComplaintService {
 
         Complaint updatedComplaint =
                 complaintRepository.save(complaint);
+
+        ComplaintEvent event = new ComplaintEvent(
+                updatedComplaint.getComplaintNumber(),
+                updatedComplaint.getResidentName(),
+                updatedComplaint.getResidentEmail(),
+                updatedComplaint.getResidentMobile(),
+                updatedComplaint.getStatus().name(),
+                "Your complaint has been rejected. Reason: "
+                        + updatedComplaint.getRejectionReason()
+        );
+
+        complaintEventProducer.publishComplaintEvent(event);
 
         return ComplaintResponse.builder()
                 .complaintNumber(updatedComplaint.getComplaintNumber())
